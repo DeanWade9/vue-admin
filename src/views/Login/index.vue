@@ -1,16 +1,191 @@
 <template>
   <div id="login">
-    <el-button>默认按钮11111</el-button>
+    <div class="login-wrap">
+      <ul class="menu-tab">
+        <li
+        :class="{'current': isActive === index}"
+        v-for="(item,index) in menuTab"
+        :key="index"
+        @click="toggleClass(index)"
+        >
+        {{item.txt}}
+        </li>
+      </ul>
+      <el-form :model="ruleForm" status-icon :rules="rules" ref="ruleForm" class="login-form">
+        <el-form-item prop="email" class="item-form">
+          <label>邮箱</label>
+          <el-input type="text" v-model="ruleForm.email" autocomplete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item prop="password" class="item-form">
+          <label>密码</label>
+          <el-input type="text" v-model="ruleForm.password" autocomplete="off" minlength="6" maxlength="20"></el-input>
+        </el-form-item>
+
+        <el-form-item prop="repassword" class="item-form" v-show="isActive === 1">
+          <label>重复密码</label>
+          <el-input type="text" v-model="ruleForm.repassword" autocomplete="off" minlength="6" maxlength="20"></el-input>
+        </el-form-item>
+
+        <el-form-item prop="code" class="item-form">
+          <label>验证码</label>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-input v-model.number="ruleForm.code" minlength="6" maxlength="6"></el-input>
+            </el-col>
+            <el-col :span="12">
+              <el-button type="success" class="block">获取验证码</el-button>
+            </el-col>
+          </el-row>
+        </el-form-item>
+        
+        <el-form-item class="submit-item">
+          <el-button type="danger" class="block" @click="submitForm('ruleForm')">提交</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
   </div>
 </template>
 <script>
+import { stripscript, validatemail, validatepassword, validatecode } from '@/utils/validate'
 export default {
-  name: "login"
+  name: "login",
+  data () {
+    // 验证验证码
+    var checkCode = (rule, value, callback) => {
+      this.ruleForm.code = stripscript(value)
+      value = this.ruleForm.code
+      if (!value) {
+        return callback(new Error('验证码不能为空'));
+      } else if (validatecode(value)) {
+        callback(new Error('验证码格式有误(6位数字+字母)'));
+      } else {
+          callback();
+      }
+    };
+    // 验证邮箱
+    var validateEmail = (rule, value, callback) => {
+      if (value === '') {
+        callback(new Error('请输入用户邮箱'));
+      } else if (validatemail(value)) {
+        callback(new Error('请输入正确格式的邮箱'))
+      } else {
+        callback();
+      }
+    };
+    // 验证密码
+    var validatePass = (rule, value, callback) => {
+      this.ruleForm.password = stripscript(value)
+      value = this.ruleForm.password
+      if (value === '') {
+        callback(new Error('请输入密码'));
+      } else if (validatepassword(value)) {
+        callback(new Error('密码为6-20位数字+字母'));
+      } else {
+        callback();
+      }
+    };
+
+    // 验证重复密码
+    var validateRePass = (rule, value, callback) => {
+      // 如果当前tab是注册,重复密码这里直接通过
+      if (this.isActive === 0) {
+        callback();
+        return;
+      }
+      this.ruleForm.repassword = stripscript(value)
+      value = this.ruleForm.repassword
+      if (value === '') {
+        callback(new Error('请输入重复密码'))
+      } else if (value !== this.ruleForm.password) {
+        callback(new Error('重复密码和密码不一致'))
+      } else {
+        callback();
+      }
+    }
+    return {
+      menuTab: [
+        { txt: '登录' },
+        { txt: '注册' }
+      ],
+      // 0代表当前tab对应注册, 1代表登录
+      isActive: 0,
+      ruleForm: {
+        email: '',
+        password: '',
+        repassword: '',
+        code: ''
+      },
+      rules: {
+        email: [
+          { validator: validateEmail, trigger: 'blur' }
+        ],
+        password: [
+          { validator: validatePass, trigger: 'blur' }
+        ],
+        repassword: [
+          { validator: validateRePass, trigger: 'blur' }
+        ],
+        code: [
+          { validator: checkCode, trigger: 'blur' }
+        ]
+      }
+    }
+  },
+  methods: {
+    toggleClass (index) {
+      this.isActive = index
+    },
+    submitForm(formName) {
+      this.$refs[formName].validate((valid) => {
+        if (valid) {
+          alert('submit!');
+        } else {
+          console.log('error submit!!');
+          return false;
+        }
+      });
+    }
+  }
 };
 </script>
 <style lang="scss">
 #login {
   height: 100vh;
-  background-color: rgb(240, 240, 241);
+  background-color: #344a5f;
+}
+.login-wrap {
+  width: 300px;
+  margin: auto;
+}
+.menu-tab{
+  text-align: center;
+  li {
+    display: inline-block;
+    width: 88px;
+    height: 36px;
+    line-height: 36px;
+    font-size: 14px;
+    color: #fff;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .current {
+    background-color: rgba(0, 0, 0, .1);
+  }
+}
+.login-form {
+  margin-top: 29px;
+  label {
+    color: #fff;
+    font-size: 14px;
+  }
+  .block {
+    display: block;
+    width: 100%;
+  }
+  .submit-item {
+    margin-top: 30px;
+  }
 }
 </style>
