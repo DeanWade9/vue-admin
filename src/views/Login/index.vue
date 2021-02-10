@@ -34,7 +34,7 @@
               <el-input v-model.number="ruleForm.code" minlength="6" maxlength="6"></el-input>
             </el-col>
             <el-col :span="12">
-              <el-button type="success" class="block">获取验证码</el-button>
+              <el-button type="success" class="block" @click="getSMS">获取验证码</el-button>
             </el-col>
           </el-row>
         </el-form-item>
@@ -47,14 +47,16 @@
   </div>
 </template>
 <script>
+import { GetSMS } from '@/api/login'
 import { stripscript, validatemail, validatepassword, validatecode } from '@/utils/validate'
+import { reactive, ref, isRef, toRefs, onMounted } from '@vue/composition-api'
 export default {
   name: "login",
-  data () {
+  setup(props, context) {
     // 验证验证码
     var checkCode = (rule, value, callback) => {
-      this.ruleForm.code = stripscript(value)
-      value = this.ruleForm.code
+      ruleForm.code = stripscript(value)
+      value = ruleForm.code
       if (!value) {
         return callback(new Error('验证码不能为空'));
       } else if (validatecode(value)) {
@@ -75,8 +77,8 @@ export default {
     };
     // 验证密码
     var validatePass = (rule, value, callback) => {
-      this.ruleForm.password = stripscript(value)
-      value = this.ruleForm.password
+      ruleForm.password = stripscript(value)
+      value = ruleForm.password
       if (value === '') {
         callback(new Error('请输入密码'));
       } else if (validatepassword(value)) {
@@ -89,62 +91,94 @@ export default {
     // 验证重复密码
     var validateRePass = (rule, value, callback) => {
       // 如果当前tab是注册,重复密码这里直接通过
-      if (this.isActive === 0) {
+      if (isActive.value === 0) {
         callback();
         return;
       }
-      this.ruleForm.repassword = stripscript(value)
-      value = this.ruleForm.repassword
+      ruleForm.repassword = stripscript(value)
+      value = ruleForm.repassword
       if (value === '') {
         callback(new Error('请输入重复密码'))
-      } else if (value !== this.ruleForm.password) {
+      } else if (value !== ruleForm.password) {
         callback(new Error('重复密码和密码不一致'))
       } else {
         callback();
       }
     }
-    return {
-      menuTab: [
-        { txt: '登录' },
-        { txt: '注册' }
+    // 这里面是data数据,生命周期, 自定义函数
+    const menuTab = reactive([
+      { txt: '登录' },
+      { txt: '注册' }
+    ])
+
+    // 表单绑定数据
+    const ruleForm = reactive({
+      email: '',
+      password: '',
+      repassword: '',
+      code: ''
+    })
+
+    // 表单验证对象
+    const rules = reactive({
+      email: [
+        { validator: validateEmail, trigger: 'blur' }
       ],
-      // 0代表当前tab对应注册, 1代表登录
-      isActive: 0,
-      ruleForm: {
-        email: '',
-        password: '',
-        repassword: '',
-        code: ''
-      },
-      rules: {
-        email: [
-          { validator: validateEmail, trigger: 'blur' }
-        ],
-        password: [
-          { validator: validatePass, trigger: 'blur' }
-        ],
-        repassword: [
-          { validator: validateRePass, trigger: 'blur' }
-        ],
-        code: [
-          { validator: checkCode, trigger: 'blur' }
-        ]
-      }
-    }
-  },
-  methods: {
-    toggleClass (index) {
-      this.isActive = index
-    },
-    submitForm(formName) {
-      this.$refs[formName].validate((valid) => {
+      password: [
+        { validator: validatePass, trigger: 'blur' }
+      ],
+      repassword: [
+        { validator: validateRePass, trigger: 'blur' }
+      ],
+      code: [
+        { validator: checkCode, trigger: 'blur' }
+      ]
+    })
+
+    const isActive = ref(0) // 0代表当前tab对应注册, 1代表登录
+    /**
+     * 声明函数
+     */
+    const toggleClass = (index => {
+      isActive.value = index
+    })
+    const submitForm = (formName => {
+      context.refs[formName].validate((valid) => {
+        alert(1)
         if (valid) {
           alert('submit!');
         } else {
           console.log('error submit!!');
           return false;
         }
-      });
+      })
+    })
+    /**
+     * 提交表单
+     */
+    
+    /**
+     * 获取验证码
+     */
+    const getSMS = (() => {
+      GetSMS()
+    })
+    /**
+     * 生命周期
+     */
+    // 挂载完成后
+    onMounted (() => {
+
+    })
+
+    return {
+      menuTab,
+      isActive,
+      toggleClass,
+      submitForm,
+      ruleForm,
+      rules,
+      getSMS
     }
   }
 };
