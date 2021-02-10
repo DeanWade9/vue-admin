@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { Message } from 'element-ui'
 
 const BASEURL = process.env.NODE_ENV === "production" ? "" : "/api"
 
@@ -17,6 +18,14 @@ service.interceptors.request.use((config) => {
 
 // 添加响应拦截器
 service.interceptors.response.use((response) => {
+  var data = response.data
+  if (data.resCode !== 0) {
+    Message.error(data.message)
+    return Promise.reject(data)
+  } else {
+    return response
+  }
+  
   return response
 }, (error) => {
   return Promise.reject(error)

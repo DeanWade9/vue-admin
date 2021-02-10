@@ -2,11 +2,11 @@ import service from '@/utils/request'
 /**
  * 获取验证码
  */
-export function GetSMS() {
-  service.request({
+export function GetSMS(data) {
+  return service.request({
     method: 'post',
     url: '/getSms/',
-    data: {}
+    data
   })
 }
 /**

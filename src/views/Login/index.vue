@@ -40,7 +40,7 @@
         </el-form-item>
         
         <el-form-item class="submit-item">
-          <el-button type="danger" class="block" @click="submitForm('ruleForm')">提交</el-button>
+          <el-button type="danger" class="block" @click="submitForm('ruleForm')" :disabled="loginBtnStatus">{{isActive === 0 ? "登陆" : "注册"}}</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -53,6 +53,7 @@ import { reactive, ref, isRef, toRefs, onMounted } from '@vue/composition-api'
 export default {
   name: "login",
   setup(props, context) {
+  // setup(props, { refs, root }) {
     // 验证验证码
     var checkCode = (rule, value, callback) => {
       ruleForm.code = stripscript(value)
@@ -136,6 +137,7 @@ export default {
     })
 
     const isActive = ref(0) // 0代表当前tab对应注册, 1代表登录
+    const loginBtnStatus = ref(true) //登陆按钮状态
     /**
      * 声明函数
      */
@@ -161,7 +163,21 @@ export default {
      * 获取验证码
      */
     const getSMS = (() => {
-      GetSMS()
+      // 校验是否为空, 空的话并且return 拦截,不会走到后面发请求
+      if (ruleForm.email === '') {
+        context.root.$message.error('邮箱不能为空')
+        return
+      }
+      // 校验格式是否正确, 不正确的话return 拦截,不会走到后面发请求
+      if (validatemail(ruleForm.email)) {
+        context.root.$message.error('邮箱格式不对')
+        return
+      }
+      // 请求接口
+      GetSMS({ username: ruleForm.email, module: 'login' }).then(response => {
+      }).catch(error => {
+        context.root.$message.error(error)
+      })
     })
     /**
      * 生命周期
@@ -178,7 +194,8 @@ export default {
       submitForm,
       ruleForm,
       rules,
-      getSMS
+      getSMS,
+      loginBtnStatus
     }
   }
 };
