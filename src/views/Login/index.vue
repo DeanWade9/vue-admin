@@ -11,7 +11,7 @@
         {{item.txt}}
         </li>
       </ul>
-      <el-form :model="ruleForm" status-icon :rules="rules" ref="ruleForm" class="login-form">
+      <el-form :model="ruleForm" status-icon :rules="rules" ref="loginForm" class="login-form">
         <el-form-item prop="email" class="item-form">
           <label>邮箱</label>
           <el-input type="text" v-model="ruleForm.email" autocomplete="off"></el-input>
@@ -31,23 +31,23 @@
           <label>验证码</label>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-input v-model.number="ruleForm.code" minlength="6" maxlength="6"></el-input>
+              <el-input v-model="ruleForm.code" minlength="6" maxlength="6"></el-input>
             </el-col>
             <el-col :span="12">
-              <el-button type="success" class="block" @click="getSMS">获取验证码</el-button>
+              <el-button type="success" class="block" @click="getSMS" :disabled="codeBtnStatus">{{codeBtnText}}</el-button>
             </el-col>
           </el-row>
         </el-form-item>
         
         <el-form-item class="submit-item">
-          <el-button type="danger" class="block" @click="submitForm('ruleForm')" :disabled="loginBtnStatus">{{isActive === 0 ? "登陆" : "注册"}}</el-button>
+          <el-button type="danger" class="block" @click="submitForm('loginForm')" :disabled="loginBtnStatus">{{isActive === 0 ? "登陆" : "注册"}}</el-button>
         </el-form-item>
       </el-form>
     </div>
   </div>
 </template>
 <script>
-import { GetSMS } from '@/api/login'
+import { GetSMS, Register, Login } from '@/api/login'
 import { stripscript, validatemail, validatepassword, validatecode } from '@/utils/validate'
 import { reactive, ref, isRef, toRefs, onMounted } from '@vue/composition-api'
 export default {
@@ -135,26 +135,72 @@ export default {
         { validator: checkCode, trigger: 'blur' }
       ]
     })
-
-    const isActive = ref(0) // 0代表当前tab对应注册, 1代表登录
-    const loginBtnStatus = ref(true) //登陆按钮状态
+    // 申明数据
+    const isActive = ref(0) // 0代表当前tab对应登陆, 1代表注册
+    const loginBtnStatus = ref(true) //登陆按钮状态, 默认禁用
+    const codeBtnStatus = ref(false) // 发送验证码按钮, 默认不禁用
+    const codeBtnText = ref('获取验证码') // 发送验证码按钮文本, 动态可变
+    const timer = ref(null) // 倒计时
     /**
      * 声明函数
      */
     const toggleClass = (index => {
       isActive.value = index
+      console.log(isActive.value === 0 ? '登陆' : '注册')
+      // 重置表单
+      context.refs['loginForm'].resetFields()
     })
     const submitForm = (formName => {
       context.refs[formName].validate((valid) => {
-        alert(1)
         if (valid) {
-          alert('submit!');
+          isActive.value ===0  ? login() : register()
         } else {
           console.log('error submit!!');
           return false;
         }
       })
     })
+    /**
+     * 注册
+     */
+    const register = () => {
+      // 获取用户输入注册信息
+      var requestData = {
+        username: ruleForm.email,
+        password: ruleForm.password,
+        code: ruleForm.code,
+        module: 'register'
+      }
+      Register(requestData).then(response => {
+        console.log(response);
+        var data = response.data
+        context.root.$message({
+          message: data.message,
+          type: 'success'
+        })
+        // 模拟注册成功 上面的loginBtnStatus也打开禁用了
+        toggleClass(0)
+        // 清除倒计时
+        clearCountDown()
+      }).catch(error => {
+
+      })
+    }
+    /**
+     * 登陆
+     */
+    const login = () => {
+      var requestData = {
+        username: ruleForm.email,
+        password: ruleForm.password,
+        code: ruleForm.code
+      }
+      Login(requestData).then(response => {
+        console.log(response)
+      }).catch(error => {
+
+      })
+    }
     /**
      * 提交表单
      */
@@ -173,12 +219,66 @@ export default {
         context.root.$message.error('邮箱格式不对')
         return
       }
+      // 修改发送验证码按钮状态
+      codeBtnStatus.value = false
+      // 修改发送验证码按钮内部文本
+      codeBtnText.value = '发送中'
+      // 获取验证码
+      var requestData = {
+        username: ruleForm.email,
+        module: isActive.value == 0 ? 'login' : 'register'
+      }
       // 请求接口
-      GetSMS({ username: ruleForm.email, module: 'login' }).then(response => {
-      }).catch(error => {
-        context.root.$message.error(error)
-      })
+      setTimeout(() => {
+        GetSMS(requestData).then(response => {
+          context.root.$message({
+            message: response.data.message,
+            type: 'success'
+            })
+          // 启用登陆或注册按钮
+          loginBtnStatus.value = false
+          // 调用计时器 倒计时
+          countDown(10)
+        }).catch(error => {
+          context.root.$message.error(error)
+        })
+        }, 3000)
     })
+
+    /**
+     * 倒计时
+     */
+    const countDown = ((seconds) => {
+      // 判断是否已经存在定时器，存在则清除
+      if (timer.value) {
+        clearInterval(timer.value)
+      }
+      // 这里有BUG,0和开始的数字没有了
+      var time = seconds
+      timer.value = setInterval(() => {
+        time--
+        if (time === 0) {
+          // 到时间清除定时器
+          clearInterval(timer.value)
+          // 显示按钮
+          codeBtnStatus.value = false
+          codeBtnText.value = '再次获取'
+        } else {
+          codeBtnText.value = `倒计时${time}秒`
+        }
+      }, 1000)
+    })
+    /**
+     * 清除倒计时
+     */
+    const clearCountDown = (() => {
+      // 放开发送验证码按钮禁用状态
+      codeBtnStatus.value = false
+      codeBtnText.value = '获取验证码'
+      // 清除倒计时
+      clearInterval(timer.value)
+    })
+
     /**
      * 生命周期
      */
@@ -195,7 +295,9 @@ export default {
       ruleForm,
       rules,
       getSMS,
-      loginBtnStatus
+      loginBtnStatus,
+      codeBtnStatus,
+      codeBtnText
     }
   }
 };
