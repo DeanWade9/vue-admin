@@ -198,7 +198,7 @@ export default {
         code: ruleForm.code
       }
       Login(requestData).then(response => {
-        console.log(response)
+        context.root.$router.push('console')
       }).catch(error => {
 
       })
