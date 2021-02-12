@@ -47,6 +47,7 @@
   </div>
 </template>
 <script>
+import sha1 from 'js-sha1'
 import { GetSMS, Register, Login } from '@/api/login'
 import { stripscript, validatemail, validatepassword, validatecode } from '@/utils/validate'
 import { reactive, ref, isRef, toRefs, onMounted } from '@vue/composition-api'
@@ -146,7 +147,8 @@ export default {
      */
     const toggleClass = (index => {
       isActive.value = index
-      console.log(isActive.value === 0 ? '登陆' : '注册')
+      // console.log(isActive.value === 0 ? '登陆' : '注册')
+      clearCountDown()
       // 重置表单
       context.refs['loginForm'].resetFields()
     })
@@ -167,7 +169,7 @@ export default {
       // 获取用户输入注册信息
       var requestData = {
         username: ruleForm.email,
-        password: ruleForm.password,
+        password: sha1(ruleForm.password),
         code: ruleForm.code,
         module: 'register'
       }
@@ -192,7 +194,7 @@ export default {
     const login = () => {
       var requestData = {
         username: ruleForm.email,
-        password: ruleForm.password,
+        password: sha1(ruleForm.password),
         code: ruleForm.code
       }
       Login(requestData).then(response => {
@@ -219,10 +221,14 @@ export default {
         context.root.$message.error('邮箱格式不对')
         return
       }
+      updateBtnState({
+        status: false,
+        text: '发送中'
+      })
       // 修改发送验证码按钮状态
-      codeBtnStatus.value = false
+      // codeBtnStatus.value = false
       // 修改发送验证码按钮内部文本
-      codeBtnText.value = '发送中'
+      // codeBtnText.value = '发送中'
       // 获取验证码
       var requestData = {
         username: ruleForm.email,
@@ -244,7 +250,13 @@ export default {
         })
         }, 3000)
     })
-
+    /**
+    * 修改获取验证码按钮状态
+    */
+    const updateBtnState = (params) => {
+      codeBtnStatus.value = params.status
+      codeBtnText.value = params.text
+    }
     /**
      * 倒计时
      */
@@ -261,8 +273,12 @@ export default {
           // 到时间清除定时器
           clearInterval(timer.value)
           // 显示按钮
-          codeBtnStatus.value = false
-          codeBtnText.value = '再次获取'
+          updateBtnState({
+            status: false,
+            text: '再次获取'
+          })
+          // codeBtnStatus.value = false
+          // codeBtnText.value = '再次获取'
         } else {
           codeBtnText.value = `倒计时${time}秒`
         }
@@ -273,12 +289,15 @@ export default {
      */
     const clearCountDown = (() => {
       // 放开发送验证码按钮禁用状态
-      codeBtnStatus.value = false
-      codeBtnText.value = '获取验证码'
+      updateBtnState({
+        status: false,
+        text: '获取验证码'
+      })
+      // codeBtnStatus.value = false
+      // codeBtnText.value = '获取验证码'
       // 清除倒计时
       clearInterval(timer.value)
     })
-
     /**
      * 生命周期
      */

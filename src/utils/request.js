@@ -23,7 +23,8 @@ service.interceptors.response.use((response) => {
     Message.error(data.message)
     return Promise.reject(data)
   } else {
-    return response
+    // return response
+    return Promise.resolve(response)
   }
 }, (error) => {
   return Promise.reject(error)
